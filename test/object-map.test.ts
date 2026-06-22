@@ -71,6 +71,12 @@ test("runs zachs-rules custom rules", async () => {
       file: "fixtures/single-use.ts",
       ruleId: "zachs-rules/no-single-use-const",
       message:
+        "`API_URL` is a const that is only used once. Consider inlining it.",
+    },
+    {
+      file: "fixtures/single-use.ts",
+      ruleId: "zachs-rules/no-single-use-const",
+      message:
         "`once` is a const that is only used once. Consider inlining it.",
     },
     {
@@ -85,5 +91,46 @@ test("runs zachs-rules custom rules", async () => {
       message:
         "`deployment` is remapped by identical property names for all of its known properties. Prefer `{ ...deployment }`.",
     },
+  ])
+})
+
+test("can ignore constant-case single-use const names", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["fixtures/single-use.ts"],
+        languageOptions: {
+          parser,
+          parserOptions: {
+            projectService: true,
+            tsconfigRootDir: root,
+          },
+        },
+        plugins: {
+          "zachs-rules": eslintPlugin,
+        },
+        rules: {
+          "zachs-rules/no-single-use-const": [
+            "error",
+            { ignoreConstantCase: true },
+          ],
+        },
+      },
+    ],
+  })
+
+  const results = await eslint.lintFiles(["fixtures/single-use.ts"])
+  const messages = results.flatMap((result) =>
+    result.messages
+      .filter((message) => message.ruleId === "zachs-rules/no-single-use-const")
+      .map((message) => message.message)
+      .toSorted(),
+  )
+
+  expect(messages).toEqual([
+    "`once` is a const that is only used once. Consider inlining it.",
+    "`scopedOnce` is a const that is only used once. Consider inlining it.",
   ])
 })

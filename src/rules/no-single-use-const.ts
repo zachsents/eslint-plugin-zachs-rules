@@ -2,6 +2,7 @@ import { ESLintUtils, AST_NODE_TYPES, TSESLint } from "@typescript-eslint/utils"
 
 type Options = [
   {
+    ignoreConstantCase?: boolean
     ignoreDestructuring?: boolean
     ignoreExports?: boolean
   }?,
@@ -49,6 +50,10 @@ function hasNonInitializerWrite(variable: TSESLint.Scope.Variable) {
   )
 }
 
+function isConstantCase(name: string) {
+  return /^[A-Z][A-Z0-9_]*$/u.test(name)
+}
+
 export default createRule<Options, MessageIds>({
   name: "no-single-use-const",
   meta: {
@@ -67,6 +72,9 @@ export default createRule<Options, MessageIds>({
           ignoreExports: {
             type: "boolean",
           },
+          ignoreConstantCase: {
+            type: "boolean",
+          },
         },
         additionalProperties: false,
       },
@@ -76,8 +84,15 @@ export default createRule<Options, MessageIds>({
         "`{{name}}` is a const that is only used once. Consider inlining it.",
     },
   },
-  defaultOptions: [{ ignoreDestructuring: true, ignoreExports: true }],
+  defaultOptions: [
+    {
+      ignoreConstantCase: false,
+      ignoreDestructuring: true,
+      ignoreExports: true,
+    },
+  ],
   create(context, [options]) {
+    const ignoreConstantCase = options?.ignoreConstantCase ?? false
     const ignoreDestructuring = options?.ignoreDestructuring ?? true
     const ignoreExports = options?.ignoreExports ?? true
 
@@ -89,6 +104,7 @@ export default createRule<Options, MessageIds>({
             ignoreExports,
             ignoreDestructuring,
           ) ||
+          (ignoreConstantCase && isConstantCase(variable.name)) ||
           hasNonInitializerWrite(variable)
         ) {
           continue

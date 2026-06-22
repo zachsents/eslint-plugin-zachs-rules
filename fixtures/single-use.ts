@@ -4,6 +4,9 @@ declare function getObject(): { destructured: string }
 const once = getValue()
 console.log(once)
 
+const API_URL = getValue()
+console.log(API_URL)
+
 const twice = getValue()
 console.log(twice)
 console.log(twice)

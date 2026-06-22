@@ -10,6 +10,8 @@ A small set of custom ESLint rules.
     inlined.
   - Skips exports, destructuring, `declare const`, and variables with
     non-initializer writes.
+  - Set `{ ignoreConstantCase: true }` to skip names like `API_URL` and
+    `VARS_LIKE_THIS`.
 
 - `zachs-rules/prefer-object-spread-for-exact-object-map`
 
@@ -48,7 +50,7 @@ export default [
       "zachs-rules": zachsRules,
     },
     rules: {
-      "zachs-rules/no-single-use-const": "warn",
+      "zachs-rules/no-single-use-const": ["warn", { ignoreConstantCase: true }],
       "zachs-rules/prefer-object-spread-for-exact-object-map": "warn",
       "zachs-rules/prefer-pick-for-object-subset-map": "warn",
     },
