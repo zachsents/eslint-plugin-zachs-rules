@@ -1,46 +1,37 @@
-# eslint-plugin-object-map
+# eslint-plugin-zachs-rules
 
-Type-aware ESLint rules for object literals that repeatedly map same-name
-properties from a source object.
-
-```ts
-return {
-  createdAt: deployment.createdAt,
-  id: deployment.id,
-  projectId: deployment.projectId,
-  status: deployment.status,
-  workflows: syncedWorkflows,
-}
-```
-
-If TypeScript proves those mapped keys are the complete known shape of
-`deployment`, the plugin recommends a spread. If TypeScript proves `deployment`
-has additional known keys, it recommends a `pick` utility such as Remeda's
-`pick`.
+A small set of custom ESLint rules.
 
 ## Rules
 
-- `object-map/prefer-object-spread-for-exact-object-map`
+- `zachs-rules/no-single-use-const`
 
-  - Reports repeated same-name property maps when the mapped keys exactly match
-    the source object's known properties.
+  - Reports `const` variables that are read exactly once and can often be
+    inlined.
+  - Skips exports, destructuring, `declare const`, and variables with
+    non-initializer writes.
+
+- `zachs-rules/prefer-object-spread-for-exact-object-map`
+
+  - Reports repeated same-name property maps when TypeScript proves the mapped
+    keys exactly match the source object's known properties.
   - Recommendation: `{ ...deployment }`.
 
-- `object-map/prefer-pick-for-object-subset-map`
-  - Reports repeated same-name property maps when the mapped keys are a subset
-    of the source object's known properties, or the source has an index
-    signature.
+- `zachs-rules/prefer-pick-for-object-subset-map`
+  - Reports repeated same-name property maps when TypeScript proves the mapped
+    keys are a subset of the source object's known properties, or the source has
+    an index signature.
   - Recommendation: `pick(deployment, ["createdAt", "id", "projectId", "status"])`.
 
-Both rules intentionally skip renamed properties, computed properties,
-already-spread objects, single-property mappings, unions, and unknown-like
-source types.
+The object-map rules intentionally skip renamed properties, computed
+properties, already-spread objects, single-property mappings, unions, and
+unknown-like source types.
 
 ## Usage
 
 ```ts
 // eslint.config.ts
-import objectMap from "eslint-plugin-object-map"
+import zachsRules from "eslint-plugin-zachs-rules"
 import parser from "@typescript-eslint/parser"
 
 export default [
@@ -54,11 +45,12 @@ export default [
       },
     },
     plugins: {
-      "object-map": objectMap,
+      "zachs-rules": zachsRules,
     },
     rules: {
-      "object-map/prefer-object-spread-for-exact-object-map": "warn",
-      "object-map/prefer-pick-for-object-subset-map": "warn",
+      "zachs-rules/no-single-use-const": "warn",
+      "zachs-rules/prefer-object-spread-for-exact-object-map": "warn",
+      "zachs-rules/prefer-pick-for-object-subset-map": "warn",
     },
   },
 ]
