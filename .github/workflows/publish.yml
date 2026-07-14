@@ -1,55 +1,213 @@
-name: Publish
+name: Release npm
 
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/publish.yml
+      - bun.lock
+      - package.json
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 concurrency:
-  group: publish-${{ github.ref }}
+  group: release-npm
   cancel-in-progress: false
 
 jobs:
   publish:
-    name: Publish to npm
+    name: Publish eslint-plugin-zachs-rules
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.12
-
-      - name: Use latest npm
-        run: npm install --global npm@latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Check
-        run: bun run check
-
-      - name: Check package version is unpublished
+      - name: Determine release
+        id: release
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          PACKAGE_VERSION="$(node -p "const p = require('./package.json'); `${p.name}@${p.version}`")"
-          if npm view "$PACKAGE_VERSION" version >/dev/null 2>&1; then
-            echo "$PACKAGE_VERSION is already published"
+          set -euo pipefail
+
+          should_publish=false
+          should_create_release=false
+
+          write_outputs() {
+            echo "should_publish=${should_publish}" >> "$GITHUB_OUTPUT"
+            echo "should_create_release=${should_create_release}" >> "$GITHUB_OUTPUT"
+          }
+
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error::Missing NPM_TOKEN repository secret"
             exit 1
           fi
 
-      - name: Publish
-        run: npm publish --access public
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          release_tag="v${package_version}"
+
+          echo "PACKAGE_NAME=${package_name}" >> "$GITHUB_ENV"
+          echo "PACKAGE_VERSION=${package_version}" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=${release_tag}" >> "$GITHUB_ENV"
+
+          release_candidate=false
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            release_candidate=true
+          elif [ "$EVENT_NAME" = "push" ]; then
+            if [ -z "${BEFORE_SHA:-}" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              release_candidate=true
+            else
+              previous_package_json="$(git show "${BEFORE_SHA}:package.json" 2>/dev/null || true)"
+
+              if [ -z "$previous_package_json" ]; then
+                release_candidate=true
+              else
+                previous_version="$(
+                  printf '%s' "$previous_package_json" | node -e "const fs = require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(0, 'utf8')).version)"
+                )"
+
+                if [ "$previous_version" = "$package_version" ]; then
+                  echo "::notice::Package version stayed at ${package_version}; skipping npm release."
+                  write_outputs
+                  exit 0
+                fi
+
+                node - "$previous_version" "$package_version" <<'NODE'
+          const [previous, current] = process.argv.slice(2);
+
+          const parse = (version) => {
+            const match = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(version);
+
+            if (!match) {
+              throw new Error(`Unsupported semver version: ${version}`);
+            }
+
+            return match.slice(1, 4).map(Number);
+          };
+
+          const previousParts = parse(previous);
+          const currentParts = parse(current);
+          const comparison =
+            currentParts[0] - previousParts[0] ||
+            currentParts[1] - previousParts[1] ||
+            currentParts[2] - previousParts[2];
+
+          if (comparison <= 0) {
+            console.error(`Version must increase before publishing: ${previous} -> ${current}`);
+            process.exit(1);
+          }
+          NODE
+
+                release_candidate=true
+              fi
+            fi
+          fi
+
+          if [ "$release_candidate" != "true" ]; then
+            echo "::notice::No release candidate detected."
+            write_outputs
+            exit 0
+          fi
+
+          published_version="$(npm view "${package_name}@${package_version}" version --prefer-online 2>/dev/null || true)"
+          release_exists=false
+
+          if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            release_exists=true
+          fi
+
+          if [ "$published_version" = "$package_version" ]; then
+            echo "::notice::${package_name}@${package_version} is already published on npm; skipping npm publish."
+
+            if [ "$release_exists" = "false" ]; then
+              should_create_release=true
+            fi
+
+            write_outputs
+            exit 0
+          fi
+
+          if [ "$release_exists" = "true" ]; then
+            echo "::error::GitHub release ${release_tag} already exists, but ${package_name}@${package_version} is not published on npm."
+            exit 1
+          fi
+
+          should_publish=true
+          should_create_release=true
+          write_outputs
+
+      - name: Read Bun version
+        if: steps.release.outputs.should_publish == 'true'
+        id: bun-version
+        run: |
+          package_manager="$(node -p "require('./package.json').packageManager")"
+          echo "version=${package_manager#bun@}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Bun
+        if: steps.release.outputs.should_publish == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ steps.bun-version.outputs.version }}
+
+      - name: Install dependencies
+        if: steps.release.outputs.should_publish == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Publish to npm
+        if: steps.release.outputs.should_publish == 'true'
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify npm release
+        if: steps.release.outputs.should_publish == 'true'
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            published_version="$(npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version --prefer-online 2>/dev/null || true)"
+            latest_version="$(npm view "${PACKAGE_NAME}" dist-tags.latest --prefer-online 2>/dev/null || true)"
+
+            if [ "$published_version" = "$PACKAGE_VERSION" ] && [ "$latest_version" = "$PACKAGE_VERSION" ]; then
+              exit 0
+            fi
+
+            echo "Waiting for npm registry metadata to update (${attempt}/6)"
+            sleep 10
+          done
+
+          if [ "$published_version" != "$PACKAGE_VERSION" ]; then
+            echo "::error::Expected ${PACKAGE_NAME}@${PACKAGE_VERSION}, got ${published_version}"
+            exit 1
+          fi
+
+          if [ "$latest_version" != "$PACKAGE_VERSION" ]; then
+            echo "::error::Expected latest dist-tag ${PACKAGE_VERSION}, got ${latest_version}"
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        if: steps.release.outputs.should_create_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "${PACKAGE_NAME}@${PACKAGE_VERSION}" \
+            --notes "Published ${PACKAGE_NAME}@${PACKAGE_VERSION} to npm."
