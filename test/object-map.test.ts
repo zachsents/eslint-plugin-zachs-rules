@@ -27,6 +27,7 @@ test("runs zachs-rules custom rules", async () => {
           "zachs-rules": eslintPlugin,
         },
         rules: {
+          "zachs-rules/no-overly-broad-parameters": "error",
           "zachs-rules/no-single-use-const": "error",
           "zachs-rules/prefer-object-spread-for-exact-object-map": "error",
           "zachs-rules/prefer-pick-for-object-subset-map": "error",
@@ -61,6 +62,24 @@ test("runs zachs-rules custom rules", async () => {
     )
 
   expect(customMessages).toEqual([
+    {
+      file: "fixtures/overly-broad-parameters.ts",
+      ruleId: "zachs-rules/no-overly-broad-parameters",
+      message:
+        "`error` is declared as `string | Error`, but every direct call to `stringifyError` passes `Error`. Narrow the parameter type to `Error`.",
+    },
+    {
+      file: "fixtures/overly-broad-parameters.ts",
+      ruleId: "zachs-rules/no-overly-broad-parameters",
+      message:
+        "`error` is declared as `unknown`, but every direct call to `errorMessage` passes `Error`. Narrow the parameter type to `Error`.",
+    },
+    {
+      file: "fixtures/overly-broad-parameters.ts",
+      ruleId: "zachs-rules/no-overly-broad-parameters",
+      message:
+        "`error` is declared as `unknown`, but every direct call to `errorWithThis` passes `Error`. Narrow the parameter type to `Error`.",
+    },
     {
       file: "fixtures/pick.ts",
       ruleId: "zachs-rules/prefer-pick-for-object-subset-map",

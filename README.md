@@ -6,6 +6,13 @@ A small set of custom ESLint rules.
 
 ### ESLint
 
+- `zachs-rules/no-overly-broad-parameters`
+
+  - Reports explicitly typed parameters on non-exported function helpers when
+    every visible direct callsite accepts a common narrower type.
+  - Skips helpers that escape through a non-call reference, omitted or spread
+    arguments, overloads, incompatible callsite types, and exported functions.
+
 - `zachs-rules/no-single-use-const`
 
   - Reports `const` variables that are read exactly once and can often be
@@ -58,6 +65,7 @@ export default [
       "zachs-rules": zachsRules,
     },
     rules: {
+      "zachs-rules/no-overly-broad-parameters": "warn",
       "zachs-rules/no-single-use-const": ["warn", { ignoreConstantCase: true }],
       "zachs-rules/prefer-object-spread-for-exact-object-map": "warn",
       "zachs-rules/prefer-pick-for-object-subset-map": "warn",
