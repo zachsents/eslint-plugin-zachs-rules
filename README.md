@@ -1,5 +1,7 @@
 # eslint-plugin-zachs-rules
 
+> Maintenance moved to [`zachsents/zachs-tools`](https://github.com/zachsents/zachs-tools/tree/main/packages/eslint-plugin-zachs-rules). This repository is kept for history; open new issues and changes in the monorepo.
+
 A small set of custom ESLint rules.
 
 ## Rules
