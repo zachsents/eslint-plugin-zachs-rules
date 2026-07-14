@@ -67,3 +67,20 @@ bun run check
 
 The package uses Bun, Prettier, oxlint with type-aware linting, and zshy for
 build output.
+
+## Publishing
+
+Publishing runs through GitHub Actions in `.github/workflows/publish.yml` when a
+GitHub release is published, or manually through `workflow_dispatch`.
+
+The workflow uses npm trusted publishing, so the npm package needs a trusted
+publisher configured with:
+
+- Publisher: GitHub Actions
+- Owner: `zachsents`
+- Repository: `eslint-plugin-zachs-rules`
+- Workflow filename: `publish.yml`
+- Allowed action: `npm publish`
+
+The workflow runs `bun run check`, verifies the package version is not already
+published, and then runs `npm publish --access public`.
