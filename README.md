@@ -4,6 +4,8 @@ A small set of custom ESLint rules.
 
 ## Rules
 
+### ESLint
+
 - `zachs-rules/no-single-use-const`
 
   - Reports `const` variables that are read exactly once and can often be
@@ -29,7 +31,13 @@ The object-map rules intentionally skip renamed properties, computed
 properties, already-spread objects, single-property mappings, unions, and
 unknown-like source types.
 
-## Usage
+### Oxlint
+
+- `zachs-rules/require-disable-directive-description`
+  - Reports disable directives recognized by oxlint that do not include a
+    description after `--`.
+
+## ESLint Usage
 
 ```ts
 // eslint.config.ts
@@ -56,6 +64,22 @@ export default [
     },
   },
 ]
+```
+
+## Oxlint Usage
+
+```json
+{
+  "jsPlugins": [
+    {
+      "name": "zachs-rules",
+      "specifier": "eslint-plugin-zachs-rules/oxlint"
+    }
+  ],
+  "rules": {
+    "zachs-rules/require-disable-directive-description": "error"
+  }
+}
 ```
 
 ## Development
