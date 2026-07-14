@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test"
 import type { Comment, Context, Diagnostic, ESTree } from "@oxlint/plugins"
+import { defineConfig } from "oxlint"
+import oxlintRecommended from "../src/configs/oxlint-recommended"
 import oxlintPlugin from "../src/oxlint"
 
 const rule = oxlintPlugin.rules["require-disable-directive-description"]
@@ -107,4 +109,24 @@ test("allows described disable directives and enable directives", () => {
   ])
 
   expect(reports).toEqual([])
+})
+
+test("recommended preset registers the oxlint plugin and rule", () => {
+  const config = defineConfig({
+    extends: [oxlintRecommended],
+  })
+
+  expect(config.extends).toEqual([
+    {
+      jsPlugins: [
+        {
+          name: "zachs-rules",
+          specifier: "eslint-plugin-zachs-rules/oxlint",
+        },
+      ],
+      rules: {
+        "zachs-rules/require-disable-directive-description": "error",
+      },
+    },
+  ])
 })
