@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { ESLint } from "eslint"
+import { defineConfig } from "eslint/config"
 import parser from "@typescript-eslint/parser"
 import plugin from "../src/index"
 
@@ -192,4 +193,49 @@ test("can configure the maximum use threshold", async () => {
     "`scopedOnce` is a const that is only used once. Consider inlining it.",
     "`twice` is a const that is only used 2 times. Consider inlining it.",
   ])
+})
+
+test("recommended preset registers its rule and default options", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: plugin.configs.recommended,
+  })
+
+  const [result] = await eslint.lintText(
+    "const API_URL = 'https://example.com'; const value = 1; console.log(API_URL, value, value, value)",
+  )
+
+  expect(
+    result?.messages
+      .filter((message) => message.ruleId?.startsWith("zachs-rules/"))
+      .map((message) => message.ruleId),
+  ).toEqual(["zachs-rules/no-single-use-const"])
+})
+
+test("recommended-type-checked preset runs every ESLint rule", async () => {
+  const config = defineConfig([plugin.configs["recommended-type-checked"]])
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: config,
+  })
+
+  const results = await eslint.lintFiles(["fixtures/**/*.ts"])
+  const ruleIds = new Set(
+    results.flatMap((result) =>
+      result.messages.flatMap((message) =>
+        message.ruleId?.startsWith("zachs-rules/") ? [message.ruleId] : [],
+      ),
+    ),
+  )
+
+  expect(ruleIds).toEqual(
+    new Set([
+      "zachs-rules/no-overly-broad-parameters",
+      "zachs-rules/no-single-use-const",
+      "zachs-rules/prefer-object-spread-for-exact-object-map",
+      "zachs-rules/prefer-pick-for-object-subset-map",
+    ]),
+  )
 })

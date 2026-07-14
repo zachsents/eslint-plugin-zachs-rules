@@ -50,50 +50,31 @@ unknown-like source types.
 
 ```ts
 // eslint.config.ts
+import { defineConfig } from "eslint/config"
 import zachsRules from "eslint-plugin-zachs-rules"
-import parser from "@typescript-eslint/parser"
 
-export default [
-  {
-    files: ["**/*.ts"],
-    languageOptions: {
-      parser,
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    plugins: {
-      "zachs-rules": zachsRules,
-    },
-    rules: {
-      "zachs-rules/no-overly-broad-parameters": "warn",
-      "zachs-rules/no-single-use-const": [
-        "warn",
-        { ignoreConstantCase: true, maxUses: 2 },
-      ],
-      "zachs-rules/prefer-object-spread-for-exact-object-map": "warn",
-      "zachs-rules/prefer-pick-for-object-subset-map": "warn",
-    },
-  },
-]
+export default defineConfig([zachsRules.configs["recommended-type-checked"]])
 ```
+
+Use `zachsRules.configs.recommended` to enable only the non-type-aware
+`no-single-use-const` rule. The `recommended-type-checked` preset enables every
+ESLint rule, configures `@typescript-eslint/parser`, and uses the TypeScript
+project service. Both presets configure `no-single-use-const` with
+`{ ignoreConstantCase: true, maxUses: 3 }`.
 
 ## Oxlint Usage
 
-```json
-{
-  "jsPlugins": [
-    {
-      "name": "zachs-rules",
-      "specifier": "eslint-plugin-zachs-rules/oxlint"
-    }
-  ],
-  "rules": {
-    "zachs-rules/require-disable-directive-description": "error"
-  }
-}
+```ts
+// oxlint.config.ts
+import { defineConfig } from "oxlint"
+import recommended from "eslint-plugin-zachs-rules/oxlint/recommended"
+
+export default defineConfig({
+  extends: [recommended],
+})
 ```
+
+Loading `oxlint.config.ts` requires Node.js `^20.19.0` or `>=22.18.0`.
 
 ## Development
 

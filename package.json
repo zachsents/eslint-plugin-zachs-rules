@@ -30,6 +30,7 @@
     "exports": {
       ".": "./src/index.ts",
       "./oxlint": "./src/oxlint.ts",
+      "./oxlint/recommended": "./src/configs/oxlint-recommended.ts",
       "./rules/*": "./src/rules/*"
     },
     "cjs": false,
@@ -47,6 +48,11 @@
       "bun": "./src/oxlint.ts",
       "types": "./dist/oxlint.d.ts",
       "default": "./dist/oxlint.js"
+    },
+    "./oxlint/recommended": {
+      "bun": "./src/configs/oxlint-recommended.ts",
+      "types": "./dist/configs/oxlint-recommended.d.ts",
+      "default": "./dist/configs/oxlint-recommended.js"
     },
     "./rules/*": {
       "bun": "./src/rules/*",
@@ -81,12 +87,12 @@
   },
   "dependencies": {
     "@oxlint/plugins": "^1.74.0",
+    "@typescript-eslint/parser": "^8.62.0",
     "@typescript-eslint/utils": "^8.62.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^24.10.1",
-    "@typescript-eslint/parser": "^8.62.0",
     "eslint": "^9.39.4",
     "oxlint": "^1.74.0",
     "oxlint-tsgolint": "^0.24.0",
