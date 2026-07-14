@@ -8,8 +8,10 @@ A small set of custom ESLint rules.
 
 - `zachs-rules/no-single-use-const`
 
-  - Reports `const` variables that are read exactly once and can often be
-    inlined.
+  - Reports `const` variables that are read up to a configurable threshold and
+    can often be inlined.
+  - Set `{ maxUses: 2 }` to report const variables read up to two times. The
+    default is `1`.
   - Skips exports, destructuring, `declare const`, and variables with
     non-initializer writes.
   - Set `{ ignoreConstantCase: true }` to skip names like `API_URL` and
@@ -58,7 +60,10 @@ export default [
       "zachs-rules": zachsRules,
     },
     rules: {
-      "zachs-rules/no-single-use-const": ["warn", { ignoreConstantCase: true }],
+      "zachs-rules/no-single-use-const": [
+        "warn",
+        { ignoreConstantCase: true, maxUses: 2 },
+      ],
       "zachs-rules/prefer-object-spread-for-exact-object-map": "warn",
       "zachs-rules/prefer-pick-for-object-subset-map": "warn",
     },

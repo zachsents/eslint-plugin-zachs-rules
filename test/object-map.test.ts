@@ -134,3 +134,43 @@ test("can ignore constant-case single-use const names", async () => {
     "`scopedOnce` is a const that is only used once. Consider inlining it.",
   ])
 })
+
+test("can configure the maximum use threshold", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: [
+      {
+        files: ["fixtures/single-use.ts"],
+        languageOptions: {
+          parser,
+          parserOptions: {
+            projectService: true,
+            tsconfigRootDir: root,
+          },
+        },
+        plugins: {
+          "zachs-rules": eslintPlugin,
+        },
+        rules: {
+          "zachs-rules/no-single-use-const": ["error", { maxUses: 2 }],
+        },
+      },
+    ],
+  })
+
+  const results = await eslint.lintFiles(["fixtures/single-use.ts"])
+  const messages = results.flatMap((result) =>
+    result.messages
+      .filter((message) => message.ruleId === "zachs-rules/no-single-use-const")
+      .map((message) => message.message)
+      .toSorted(),
+  )
+
+  expect(messages).toEqual([
+    "`API_URL` is a const that is only used once. Consider inlining it.",
+    "`once` is a const that is only used once. Consider inlining it.",
+    "`scopedOnce` is a const that is only used once. Consider inlining it.",
+    "`twice` is a const that is only used 2 times. Consider inlining it.",
+  ])
+})

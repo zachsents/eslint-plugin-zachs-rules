@@ -5,6 +5,7 @@ type Options = [
     ignoreConstantCase?: boolean
     ignoreDestructuring?: boolean
     ignoreExports?: boolean
+    maxUses?: number
   }?,
 ]
 
@@ -60,7 +61,7 @@ export default createRule<Options, MessageIds>({
     type: "suggestion",
     docs: {
       description:
-        "Report const variables that are read exactly once and can often be inlined",
+        "Report const variables read up to a configurable threshold that can often be inlined",
     },
     schema: [
       {
@@ -75,13 +76,17 @@ export default createRule<Options, MessageIds>({
           ignoreConstantCase: {
             type: "boolean",
           },
+          maxUses: {
+            type: "integer",
+            minimum: 1,
+          },
         },
         additionalProperties: false,
       },
     ],
     messages: {
       singleUseConst:
-        "`{{name}}` is a const that is only used once. Consider inlining it.",
+        "`{{name}}` is a const that is only used {{useCount}}. Consider inlining it.",
     },
   },
   defaultOptions: [
@@ -89,12 +94,14 @@ export default createRule<Options, MessageIds>({
       ignoreConstantCase: false,
       ignoreDestructuring: true,
       ignoreExports: true,
+      maxUses: 1,
     },
   ],
   create(context, [options]) {
     const ignoreConstantCase = options?.ignoreConstantCase ?? false
     const ignoreDestructuring = options?.ignoreDestructuring ?? true
     const ignoreExports = options?.ignoreExports ?? true
+    const maxUses = options?.maxUses ?? 1
 
     function checkScope(scope: TSESLint.Scope.Scope) {
       for (const variable of scope.variables) {
@@ -115,12 +122,20 @@ export default createRule<Options, MessageIds>({
         )
         const definition = variable.defs.at(0)
 
-        if (readReferences.length === 1 && definition) {
+        if (
+          readReferences.length >= 1 &&
+          readReferences.length <= maxUses &&
+          definition
+        ) {
           context.report({
             node: definition.name,
             messageId: "singleUseConst",
             data: {
               name: variable.name,
+              useCount:
+                readReferences.length === 1
+                  ? "once"
+                  : `${readReferences.length} times`,
             },
           })
         }
